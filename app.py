@@ -22,7 +22,8 @@ if operation == "No (Only Turning and/or Facing)":
         offset_number = st.text_input("Offset Number (e.g., 01)", value="01")
         spindle_speed = st.text_input("Spindle Speed (RPM)", value="1200")
         feed_rate = st.text_input("Feed Rate (e.g., 0.2)", value="0.2")
-        depth_of_cut = st.number_input("Depth of Cut per Pass", value=1.0, min_value=0.01)
+        depth_of_cut_facing = st.number_input("Depth of Cut per Pass (Facing)", value=1.0, min_value=0.01, key="facing")
+        depth_of_cut_turning = st.number_input("Depth of Cut per Pass (Turning)", value=1.0, min_value=0.01, key="turning")
 
         if st.button("🔁 Generate G-Code"):
             result = []
@@ -31,18 +32,18 @@ if operation == "No (Only Turning and/or Facing)":
                 # Facing
                 result.append("\n>> FACING OPERATION")
                 N = initial_len - final_len
-                full_passes = int(N // depth_of_cut)
-                final_pass = N % depth_of_cut
+                full_passes = int(N // depth_of_cut_facing)
+                final_pass = N % depth_of_cut_facing
                 total_cut = 0
                 result.append("G28 U0 W0 (HOME POSITION, DEFAULT)")
                 result.append(f"T{tool_number}{offset_number} (Tool and offset number)")
                 result.append(f"S{spindle_speed} M03 (Spindle speed and start)")
                 result.append(f"G00 X{initial_dia + 4} Z{N + 4} M07 (Coolant on)")
                 for _ in range(full_passes):
-                    total_cut += depth_of_cut
+                    total_cut += depth_of_cut_facing
                     result.append(f"G00 Z{N - total_cut} (Move closer)")
                     result.append(f"G01 X-1 F{feed_rate} (Facing cut)")
-                    result.append(f"G00 Z{N - total_cut + depth_of_cut} X{initial_dia + 2} (Retract tool)")
+                    result.append(f"G00 Z{N - total_cut + depth_of_cut_facing} X{initial_dia + 2} (Retract tool)")
                 if final_pass > 0:
                     total_cut += final_pass
                     result.append(f"G00 Z{N - total_cut} (Final finishing pass)")
@@ -51,17 +52,17 @@ if operation == "No (Only Turning and/or Facing)":
                 # Turning
                 result.append("\n>> TURNING OPERATION")
                 N = initial_dia - final_dia
-                full_passes = int(N // depth_of_cut)
-                final_pass = N % depth_of_cut
+                full_passes = int(N // depth_of_cut_turning)
+                final_pass = N % depth_of_cut_turning
                 n = initial_dia
                 p = 0
                 result.append(f"G00 X{initial_dia + 4} Z3 M07 (Coolant on)")
                 for _ in range(full_passes):
-                    n -= depth_of_cut
+                    n -= depth_of_cut_turning
                     result.append(f"G00 X{n} Z0.5 (Positioning for cut)")
                     result.append(f"G01 Z-{final_len} F{feed_rate}")
                     result.append(f"G00 X{initial_dia - p} Z2 (Retract tool)")
-                    p += depth_of_cut
+                    p += depth_of_cut_turning
                 if final_pass > 0:
                     n -= final_pass
                     result.append(f"G00 X{n} Z0.5 (Final finishing cut)")
@@ -70,8 +71,8 @@ if operation == "No (Only Turning and/or Facing)":
             elif dia_diff > 0:
                 result.append(">> Perform only turning")
                 N = initial_dia - final_dia
-                full_passes = int(N // depth_of_cut)
-                final_pass = N % depth_of_cut
+                full_passes = int(N // depth_of_cut_turning)
+                final_pass = N % depth_of_cut_turning
                 n = initial_dia
                 p = 0
                 result.append("G28 U0 W0 (HOME POSITION, DEFAULT)")
@@ -79,11 +80,11 @@ if operation == "No (Only Turning and/or Facing)":
                 result.append(f"S{spindle_speed} M03 (Spindle start)")
                 result.append(f"G00 X{initial_dia + 4} Z3 M07 (Coolant on)")
                 for _ in range(full_passes):
-                    n -= depth_of_cut
+                    n -= depth_of_cut_turning
                     result.append(f"G00 X{n} Z0.5 (Positioning for cut)")
                     result.append(f"G01 Z-{final_len} F{feed_rate}")
                     result.append(f"G00 X{initial_dia - p} Z2 (Retract tool)")
-                    p += depth_of_cut
+                    p += depth_of_cut_turning
                 if final_pass > 0:
                     n -= final_pass
                     result.append(f"G00 X{n} Z0.5 (Final finishing cut)")
@@ -92,18 +93,18 @@ if operation == "No (Only Turning and/or Facing)":
             elif len_diff > 0:
                 result.append(">> Perform only facing")
                 N = initial_len - final_len
-                full_passes = int(N // depth_of_cut)
-                final_pass = N % depth_of_cut
+                full_passes = int(N // depth_of_cut_facing)
+                final_pass = N % depth_of_cut_facing
                 total_cut = 0
                 result.append("G28 U0 W0 (HOME POSITION, DEFAULT)")
                 result.append(f"T{tool_number}{offset_number} (Tool and offset number)")
                 result.append(f"S{spindle_speed} M03 (Spindle start)")
                 result.append(f"G00 X{initial_dia + 4} Z{N + 4} M07 (Coolant on)")
                 for _ in range(full_passes):
-                    total_cut += depth_of_cut
+                    total_cut += depth_of_cut_facing
                     result.append(f"G00 Z{N - total_cut} (Move closer)")
                     result.append(f"G01 X-1 F{feed_rate} (Facing cut)")
-                    result.append(f"G00 Z{N - total_cut + depth_of_cut} X{initial_dia + 2} (Retract tool)")
+                    result.append(f"G00 Z{N - total_cut + depth_of_cut_facing} X{initial_dia + 2} (Retract tool)")
                 if final_pass > 0:
                     total_cut += final_pass
                     result.append(f"G00 Z{N - total_cut} (Final facing pass)")
@@ -130,7 +131,8 @@ else:
     initial_len = st.number_input("Initial Length of Workpiece", value=100.0)
     final_len = st.number_input("Final Length of Workpiece", value=80.0)
     feed_rate = st.text_input("Feed Rate (e.g., 0.2)", value="0.2")
-    depth_of_cut = st.number_input("Depth of Cut per Pass", value=1.0, min_value=0.01)
+    depth_of_cut_facing = st.number_input("Depth of Cut per Pass (Facing)", value=1.0, min_value=0.01, key="facing2")
+    depth_of_cut_turning = st.number_input("Depth of Cut per Pass (Turning)", value=1.0, min_value=0.01, key="turning2")
 
     # Step Turning
     st.markdown("---")
@@ -163,18 +165,18 @@ else:
             # Facing
             result.append("\n>> FACING OPERATION")
             N = initial_len - final_len
-            full_passes = int(N // depth_of_cut)
-            final_pass = N % depth_of_cut
+            full_passes = int(N // depth_of_cut_facing)
+            final_pass = N % depth_of_cut_facing
             total_cut = 0
             result.append("G28 U0 W0 (HOME POSITION, DEFAULT)")
             result.append(f"T{tool_number}{offset_number} (Tool and offset number)")
             result.append(f"S{spindle_speed} M03 (Spindle speed and start)")
             result.append(f"G00 X{initial_dia + 4} Z{N + 4} M07 (Coolant on)")
             for _ in range(full_passes):
-                total_cut += depth_of_cut
+                total_cut += depth_of_cut_facing
                 result.append(f"G00 Z{N - total_cut} (Move closer)")
                 result.append(f"G01 X-1 F{feed_rate} (Facing cut)")
-                result.append(f"G00 Z{N - total_cut + depth_of_cut} X{initial_dia + 2} (Retract tool)")
+                result.append(f"G00 Z{N - total_cut + depth_of_cut_facing} X{initial_dia + 2} (Retract tool)")
             if final_pass > 0:
                 total_cut += final_pass
                 result.append(f"G00 Z{N - total_cut} (Final finishing pass)")
@@ -183,17 +185,17 @@ else:
             # Turning
             result.append("\n>> TURNING OPERATION")
             N = initial_dia - final_dia
-            full_passes = int(N // depth_of_cut)
-            final_pass = N % depth_of_cut
+            full_passes = int(N // depth_of_cut_turning)
+            final_pass = N % depth_of_cut_turning
             n = initial_dia
             p = 0
             result.append(f"G00 X{initial_dia + 4} Z3 M07 (Coolant on)")
             for _ in range(full_passes):
-                n -= depth_of_cut
+                n -= depth_of_cut_turning
                 result.append(f"G00 X{n} Z0.5 (Positioning for cut)")
                 result.append(f"G01 Z-{final_len} F{feed_rate}")
                 result.append(f"G00 X{initial_dia - p} Z2 (Retract tool)")
-                p += depth_of_cut
+                p += depth_of_cut_turning
             if final_pass > 0:
                 n -= final_pass
                 result.append(f"G00 X{n} Z0.5 (Final finishing cut)")
@@ -202,8 +204,8 @@ else:
         elif dia_diff > 0:
             result.append(">> Perform only turning")
             N = initial_dia - final_dia
-            full_passes = int(N // depth_of_cut)
-            final_pass = N % depth_of_cut
+            full_passes = int(N // depth_of_cut_turning)
+            final_pass = N % depth_of_cut_turning
             n = initial_dia
             p = 0
             result.append("G28 U0 W0 (HOME POSITION, DEFAULT)")
@@ -211,11 +213,11 @@ else:
             result.append(f"S{spindle_speed} M03 (Spindle start)")
             result.append(f"G00 X{initial_dia + 4} Z3 M07 (Coolant on)")
             for _ in range(full_passes):
-                n -= depth_of_cut
+                n -= depth_of_cut_turning
                 result.append(f"G00 X{n} Z0.5 (Positioning for cut)")
                 result.append(f"G01 Z-{final_len} F{feed_rate}")
                 result.append(f"G00 X{initial_dia - p} Z2 (Retract tool)")
-                p += depth_of_cut
+                p += depth_of_cut_turning
             if final_pass > 0:
                 n -= final_pass
                 result.append(f"G00 X{n} Z0.5 (Final finishing cut)")
@@ -224,18 +226,18 @@ else:
         elif len_diff > 0:
             result.append(">> Perform only facing")
             N = initial_len - final_len
-            full_passes = int(N // depth_of_cut)
-            final_pass = N % depth_of_cut
+            full_passes = int(N // depth_of_cut_facing)
+            final_pass = N % depth_of_cut_facing
             total_cut = 0
             result.append("G28 U0 W0 (HOME POSITION, DEFAULT)")
             result.append(f"T{tool_number}{offset_number} (Tool and offset number)")
             result.append(f"S{spindle_speed} M03 (Spindle start)")
             result.append(f"G00 X{initial_dia + 4} Z{N + 4} M07 (Coolant on)")
             for _ in range(full_passes):
-                total_cut += depth_of_cut
+                total_cut += depth_of_cut_facing
                 result.append(f"G00 Z{N - total_cut} (Move closer)")
                 result.append(f"G01 X-1 F{feed_rate} (Facing cut)")
-                result.append(f"G00 Z{N - total_cut + depth_of_cut} X{initial_dia + 2} (Retract tool)")
+                result.append(f"G00 Z{N - total_cut + depth_of_cut_facing} X{initial_dia + 2} (Retract tool)")
             if final_pass > 0:
                 total_cut += final_pass
                 result.append(f"G00 Z{N - total_cut} (Final facing pass)")
@@ -244,7 +246,7 @@ else:
         else:
             result.append(">> No operation needed or invalid input")
 
-        # Step Turning G-code
+        # Step Turning G-code (unchanged)
         result.append("\n>> STEP TURNING OPERATION")
         result.append(f"T{step_tool_number}{step_offset_number}")
         result.append(f"G00 X{step_initial_dia + 4} Z2")
